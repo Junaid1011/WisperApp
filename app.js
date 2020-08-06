@@ -4,7 +4,8 @@ const express = require("express");
 const bodyparser = require("body-parser");
 const ejs = require("ejs");
 const mongoose = require("mongoose");
-const md5 = require("md5");
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 const app = express();
 
@@ -52,18 +53,21 @@ app.get("/register",function(req,res){
 
 ///////////////////////////////for register new user///////////////////////
 app.post("/register", function(req,res){
-    const newUser = new User ({
-        email:req.body.username,
-        password:md5(req.body.password)
+    bcrypt.hash(req.body.password, saltRounds, function(err, hash) {
+        const newUser = new User ({
+            email:req.body.username,
+            password:hash
+        });
+    
+        newUser.save(function(err){
+            if(err){
+                console.log(err);
+            }else{
+                res.render("secrets");
+            }
+        });
     });
-
-    newUser.save(function(err){
-        if(err){
-            console.log(err);
-        }else{
-            res.render("secrets");
-        }
-    });
+    
 
     
 });
@@ -72,20 +76,29 @@ app.post("/register", function(req,res){
 app.post("/login",function(req,res){
 
     const username = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
 
     User.findOne({email: username}, function(err, founduser){   ///this will login to the page this is level 1 of secuirty
         if(err){
             console.log(err);
         }else{
             if(founduser){
-                if(founduser.password===password){
-                    res.render("secrets");
-                }
+                // Load hash from your password DB.
+bcrypt.compare(password, founduser.password, function(err, result) {
+    // result == true
+    if(result===true){
+        res.render("secrets");
+    }
+
+});
+
             }
+
         }
+
     });
 });
+
 
 
 
